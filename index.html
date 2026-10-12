@@ -336,7 +336,7 @@ input[type="date"] {
 
 /* Rozświetlenie ramki po kliknięciu w pole wyboru */
 .extra-fields-container select:focus {
-    border-color: #28a745;
+    border-color: #047973;
 }
 
    </style>
@@ -384,9 +384,10 @@ input[type="date"] {
             <label for="todoType">Rodzaj zadania:</label>
             <select id="todoType">
                 <option value="homework">Praca domowa</option>
-                <option value="exam">Sprawdzian / Kartkówka</option>
-                <option value="project">Projekt / Prezentacja</option>
-            </select>
+                <option value="exam">Sprawdzian</option>
+                <option value="test">Kartkówka</option>
+                <option value="project">Projekt</option>
+                <option value="note">Notatka</option>
 
             <label for="todoDate">Termin wykonania:</label>
             <input type="date" id="todoDate">
@@ -442,7 +443,7 @@ function renderTodos() {
                 </div>
                 
                 <!-- Prawa strona: Przycisk usuwania (kosz) -->
-                <button class="delete-todo-btn" onclick="deleteTodoItem(${todo.id})" style="background: transparent !important; border: none !important; color: #dc3545; cursor: pointer; font-size: 16px; padding: 6px !important; margin: 0 !important; width: auto !important; height: auto !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; box-shadow: none !important;">🗑️</button>
+                <button class="delete-todo-btn" onclick="deleteTodoItem(${todo.id})" style="background: transparent !important; border: none !important; color: #dc3545; cursor: pointer; font-size: 16px; padding: 6px !important; margin: 0 !important; width: auto !important; height: auto !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; box-shadow: none !important;">Usuń</button>
             
             </div>
             ${detailsHtml}
@@ -537,10 +538,11 @@ function addTodoItem() {
 
 function renderTodos() {
     const container = document.getElementById('todoListContainer');
+    if (!container) return;
     container.innerHTML = '';
     
     if (todoItems.length === 0) {
-        container.innerHTML = '<div style="text-align:center; color:var(--text-sub); padding: 15px;">Wszystko Gotowe!</div>';
+        container.innerHTML = '<div style="text-align:center; color:var(--text-sub); padding: 15px;">Wszystko gotowe!</div>';
         return;
     }
     
@@ -548,29 +550,56 @@ function renderTodos() {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'todo-item';
         
-        // WYMUSZENIE UKŁADU: Każde zadanie to pionowy kontener zajmujący 100% szerokości
+        // Wymuszenie pełnej szerokości wiersza i wyrównania do lewej strony
         itemDiv.setAttribute('style', 'display: flex !important; flex-direction: column !important; width: 100% !important; box-sizing: border-box !important; padding: 12px 10px !important; border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important; background: transparent !important; text-align: left !important;');
         
+        // Generowanie pigułki (badge) rodzaju zadania na podstawie danych z pamięci
+        let badgeHtml = '';
+        if (todo.type === 'exam') {
+            badgeHtml = `<span class="todo-badge badge-exam">Sprawdzian</span>`;
+        } else if (todo.type === 'project') {
+            badgeHtml = `<span class="todo-badge badge-project">Projekt</span>`;
+        } else if (todo.type === 'note') {
+            badgeHtml = `<span class="todo-badge badge-note">Notatka</span>`;
+        } else if (todo.type === 'test') {
+            badgeHtml = `<span class="todo-badge badge-test">Kartkówka</span>`;
+        } else {
+            badgeHtml = `<span class="todo-badge badge-homework">Praca domowa</span>`;
+        }
+
+        // Budowanie sekcji szczegółów z pigułką NAD tematem
         let detailsHtml = '';
-        if (todo.date || todo.notes) {
-            // Dodatkowe informacje wyrównane do lewej strony
-            detailsHtml = `<div class="todo-details" style="text-align: left !important; padding-left: 30px !important; margin-top: 5px !important;">`;
-            if (todo.date) detailsHtml += `<span class="todo-date" style="display: block; font-weight: bold; color: #28a745; font-size: 13px;">📅 Termin: ${todo.date}</span>`;
-            if (todo.notes) detailsHtml += `<span class="todo-notes" style="display: block; color: var(--text-sub); font-size: 13px;">📝 ${todo.notes}</span>`;
+        if (todo.date || todo.notes || todo.type) {
+            detailsHtml = `<div class="todo-details" style="text-align: left !important; padding-left: 5px !important; margin-top: 8px !important; display: block !important; width: 100% !important;">`;
+            
+            // 1. Linijka z terminem
+            if (todo.date) {
+                detailsHtml += `<span class="todo-date" style="font-weight: bold; color: #047973; font-size: 13px; display: block; margin-bottom: 6px;">Termin: ${todo.date}</span>`;
+            }
+            
+            // 2. Linijka z pigułką rodzaju zadania (NAD TEMATEM)
+            detailsHtml += `<div style="display: flex !important; font-weight: bold !important; color: #047973; align-items: center !important; gap: 8px !important; margin-top: 2px !important; margin-bottom: 6px !important; flex-wrap: wrap !important;">`;
+            detailsHtml += badgeHtml;
+            detailsHtml += `</div>`;
+            
+            // 3. Linijka z tematem zadania
+            if (todo.notes) {
+                detailsHtml += `<span class="todo-notes" style="display: block; color: var(--text-main); font-size: 13px; margin-top: 2px;">${todo.notes}</span>`;
+            }
+            
             detailsHtml += `</div>`;
         }
         
-        // NOWY, NIEZALEŻNY UKŁAD STRUKTURALNY HTML
+        // Główna struktura wiersza przedmiotu
         itemDiv.innerHTML = `
             <div class="todo-row" style="display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; background: transparent !important;">
                 
-                <!-- Lewa strona: Checkbox i Tekst (spięte razem, wyrównane do lewej) -->
-                <div class="todo-text-container ${todo.completed ? 'done' : ''}" onclick="toggleTodoStatus(${todo.id})" style="display: flex !important; align-items: center !important; gap: 12px !important; flex: 1 !important; text-align: left !important; cursor: pointer;">
-                    <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''} onclick="event.stopPropagation(); toggleTodoStatus(${todo.id});" style="width: 18px; height: 18px; margin: 0; cursor: pointer;">
+                <!-- Lewa strona: Tekst przedmiotu -->
+                <div class="todo-text-container ${todo.completed ? 'done' : ''}" onclick="toggleTodoStatus(${todo.id})" style="display: flex !important; align-items: center !important; flex: 1 !important; text-align: left !important; cursor: pointer; padding: 4px 0;">
                     <span style="font-weight: 600; color: var(--text-main); font-size: 16px; text-align: left !important;">${todo.text}</span>
                 </div>
                 
-                <!-- Prawa strona: Samotny kosz przyklejony do prawej krawędzi -->
+                <!-- Prawa strona: Przycisk usuwania (kosz) -->
                 <button class="delete-todo-btn" onclick="deleteTodoItem(${todo.id})" style="background: transparent !important; border: none !important; color: #dc3545; cursor: pointer; font-size: 16px; padding: 6px !important; margin: 0 !important; width: auto !important; height: auto !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; box-shadow: none !important;">Usuń</button>
             
             </div>
@@ -580,6 +609,7 @@ function renderTodos() {
         container.appendChild(itemDiv);
     });
 }
+
 
 
 
