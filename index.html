@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historia Średniej Ocen</title>
+    <!-- STABILNA I NIEZAWODNA WERSJA CHART.JS DLA ZWYKŁYCH PLIKÓW HTML -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #047973;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #84c9c5;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 550px;
+        }
+        h2 { color: black; margin-bottom: 5px; }
+        p.subtitle { color: #666; margin-bottom: 20px; font-size: 14px; }
+        input {
+            width: 80%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        input:focus { border-color: #047973; }
+        button {
+            width: 87%;
+            padding: 12px;
+            background-color: #047973;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover { background-color: #047973cc; }
+        .chart-container {
+            margin-top: 25px;
+            margin-bottom: 25px;
+            position: relative;
+            width: 100%;
+            height: 280px;
+        }
+        .history-list {
+            text-align: left;
+            max-height: 150px;
+            overflow-y: auto;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #047973;
+            border-radius: 8px;
+            border: 1px solid #047973;
+        }
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 10px;
+            border-bottom: 1px solid rgba(129, 223, 218, 0.253);
+            font-size: 14px;
+        }
+        .history-item:last-child { border-bottom: none; }
+        .history-item .date { color: white; }
+        .history-item .val { font-weight: bold; color: #ffffff; }
+        .clear-btn {
+            background-color: #047973cc;
+            margin-top: 10px;
+        }
+        .clear-btn:hover { background-color: #bd2130; }
+        /* Style dla nowego systemu zakładek na górze */
+        .tabs-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 10px;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-sub);
+            font-size: 16px;
+            font-weight: bold;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: color 0.3s, border-bottom 0.3s;
+            border-bottom: 2px solid transparent;
+            width: auto; /* Nadpisanie szerokości standardowego buttona */
+        }
+        .tab-btn.active {
+            color: var(--text-main);
+            border-bottom: 2px solid #047973;
+        }
+        .app-section {
+            display: none; /* Domyślnie skrywamy sekcje, JS pokaże aktywną */
+        }
+        .app-section.active {
+            display: block;
+        }
+
+        /* Style dla notatnika zadań domowych */
+        .todo-input-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .todo-input-container input {
+            flex: 1;
+            margin: 0;
+        }
+        .main-btn {
+            width: 87%;
+            padding: 12px;
+            background-color: #047973;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            /* Płynna animacja tła i mikro-skalowania przy kliknięciu */
+            transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+        }
+
+        .main-btn:hover {
+            background-color: #047973d3;
+            box-shadow: 0 4px 8px rgba(40, 167, 69, 0.2);
+        }
+        .main-btn:active {
+            transform: scale(0.98); /* Efekt lekkiego "wciśnięcia" przycisku */
+        }
+
+        .todo-input-container button {
+            width: auto;
+            padding: 12px 20px;
+            margin: 0;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+        .todo-input-container button:active {
+            transform: scale(0.95);
+        }
+        .todo-list {
+            text-align: left;
+            max-height: 250px;
+            overflow-y: auto;
+            background-color: var(--bg-list);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            padding: 10px;
+        }
+        .todo-item {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: none; /* Usuwamy ewentualne tła z całego bloku */
+}
+
+/* Nowa klasa wyrównująca tekst z checkboxem i kosz po prawej stronie */
+.todo-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.todo-text-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    flex: 1; /* Pozwala tekstowi zająć całą przestrzeń oprócz kosza */
+}
+/* GŁÓWNY WIERSZ ZADANIA - wymuszamy brak jakichkolwiek tłeń wewnątrz listy */
+.todo-item {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: transparent !important; /* Likwiduje niechciane tła paska */
+    box-shadow: none !important;
+}
+
+/* Wiersz grupujący tekst i kosz */
+.todo-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    background: transparent !important;
+}
+
+/* SAM PRZYCISK KOSZA - całkowicie resetujemy tło i szerokość */
+.delete-todo-btn {
+    background: transparent !important; /* Wymuszenie czystego tła */
+    border: none !important;
+    color: #dc3545;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 6px !important;
+    margin: 0 !important;
+    width: auto !important; /* Blokuje rozciąganie przycisku na szerokość */
+    height: auto !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    box-shadow: none !important;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+/* Subtelne kółko podświetlenia TYLKO po najechaniu myszką */
+.delete-todo-btn:hover {
+    background-color: rgba(220, 53, 69, 0.15) !important;
+    transform: scale(1.05);
+}
+
+        /* Styl własnego, animowanego powiadomienia */
+        .custom-alert {
+            position: fixed;
+            top: -100px; /* Domyślnie schowane nad ekranem */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #dc3545; /* Kolor czerwony dla błędów */
+            color: white;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            z-index: 9999;
+            font-size: 15px;
+            
+            /* Płynna animacja wsuwania i wysuwania */
+            transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+            opacity: 0;
+        }
+
+        /* Klasa, którą JS włączy, żeby pokazać powiadomienie */
+        .custom-alert.show {
+            top: 30px; /* Wsunięcie na 20px od góry ekranu */
+            opacity: 1;
+        }
+        /* Kontener na dodatkowe pola z płynną animacją wysuwania */
+.extra-fields-container {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, opacity 0.3s ease, margin 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-align: left;
+    margin: 0;
+}
+
+/* Klasa aktywowana przez JavaScript, gdy wpiszemy przedmiot */
+.extra-fields-container.visible {
+    max-height: 350px; /* Maksymalna wysokość po rozwinięciu */
+    opacity: 1;
+    margin: 15px 0;
+}
+
+.extra-fields-container label {
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--text-sub);
+    margin-bottom: -5px;
+    padding-left: 5px;
+}
+
+/* Dostosowanie kalendarza, by pasował do stylu aplikacji */
+input[type="date"] {
+    font-family: inherit;
+    width: calc(100% - 28px);
+}
+
+/* Wygląd rozbudowanej karty zadania domowego */
+.todo-details {
+    font-size: 13px;
+    color: var(--text-sub);
+    margin-top: 4px;
+    padding-left: 28px; /* Wyrównanie do tekstu obok checkboxa */
+    line-height: 1.4;
+}
+.todo-details span {
+    display: block;
+}
+.todo-details .todo-date {
+    font-weight: bold;
+    color: #047973;
+}
+/* Styl dla etykiety tekstowej nad polem */
+.extra-fields-container label {
+    display: block;
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--text-main);
+    margin-top: 10px;
+    margin-bottom: 5px;
+    text-align: left;
+}
+
+/* Nowoczesny wygląd rozwijanej listy wyboru */
+.extra-fields-container select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid var(--border-color);
+    background-color: var(--bg-container);
+    color: var(--text-main);
+    border-radius: 8px;
+    font-size: 16px;
+    outline: none;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color 0.3s;
+}
+
+/* Rozświetlenie ramki po kliknięciu w pole wyboru */
+.extra-fields-container select:focus {
+    border-color: #28a745;
+}
+
+   </style>
+</head>
+<body>
+    <div id="customAlert" class="custom-alert">Komunikat błędu</div>
+    <div class="container">
+        <!-- NOWOŚĆ: Przełącznik zakładek na górze -->
+        <div class="tabs-container">
+            <button class="tab-btn active" onclick="switchTab('chartSection', this)">Średnia</button>
+            <button class="tab-btn" onclick="switchTab('todoSection', this)">Zadania domowe</button>
+        </div>
+
+        <!-- SEKCJA 1: Wykres i średnie (Twój obecny główny widok) -->
+        <div id="chartSection" class="app-section active">
+            <h2>Śledzenie Średniej Ocen</h2>
+            <p class="subtitle">Wpisz swoją aktualną średnią. Dzięki temu zobaczysz jak twoja średnia zmieniała się w roku szkolnym.</p>
+            
+            <input type="number" id="averageInput" placeholder="Wpisz średnią (np. 4.75)" min="1" max="6" step="0.01">
+            <button class="main-btn" onclick="addAverageRecord()">Zapisz średnią</button>
+            
+            <div class="chart-container">
+                <canvas id="averageTimelineChart"></canvas>
+            </div>
+            
+            <div class="history-list" id="historyLog"></div>
+            <button class="clear-btn" onclick="clearHistory()">Wyczyść historię</button>
+        </div>
+
+        <!-- SEKCJA 2: Nowy ładny notatnik zadań domowych z dynamicznymi polami -->
+        <div id="todoSection" class="app-section">
+            <h2>Zadania Domowe</h2>
+            <p class="subtitle">Zapisuj nadchodzące sprawdziany, projekty i prace domowe.</p>
+    
+        <div style="background: var(--bg-list); padding: 15px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 20px;">
+            <div class="todo-input-container" style="margin-bottom: 0;">
+            <!-- Dodane oninput, które na bieżąco sprawdza wpisywany tekst -->
+            <input type="text" id="todoInput" oninput="checkTodoInput(this.value)" placeholder="Wpisz np. Matematyka, Polski, Historia...">
+            <button class="main-btn add-todo-btn" onclick="addTodoItem()">Dodaj</button>
+        </div>
+
+        <!-- Ukryty kontener z dodatkowymi polami -->
+<!-- Ukryty kontener z dodatkowymi polami - kategoria na samej górze -->
+        <div id="extraFields" class="extra-fields-container">
+            <label for="todoType">Rodzaj zadania:</label>
+            <select id="todoType">
+                <option value="homework">Praca domowa</option>
+                <option value="exam">Sprawdzian / Kartkówka</option>
+                <option value="project">Projekt / Prezentacja</option>
+            </select>
+
+            <label for="todoDate">Termin wykonania:</label>
+            <input type="date" id="todoDate">
+            
+            <label for="todoNotes">Dodatkowe informacje / szczegóły:</label>
+            <input type="text" id="todoNotes" placeholder="np. Zadanie 3 i 4 ze strony 52, przynieść cyrkiel">
+        </div>
+    </div>
+    <div class="todo-list" id="todoListContainer">
+        <!-- Tutaj JavaScript wyrenderuje zadania -->
+    </div>
+</div>
+
+    </div>
+
+<script>
+    // Inicjalizacja tablicy zadań domowych z pamięci przeglądarki
+let todoItems = JSON.parse(localStorage.getItem('schoolTodoList')) || [];
+
+// Dodaj wywołanie renderu zadań do ogólnej funkcji startowej (np. pod updateUI(); na dole)
+function renderTodos() {
+    const container = document.getElementById('todoListContainer');
+    container.innerHTML = '';
+    
+    if (todoItems.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:var(--text-sub); padding: 15px;">Wszystko Gotowe!</div>';
+        return;
+    }
+    
+    todoItems.forEach(todo => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'todo-item';
+        
+        // Wymuszenie pełnej szerokości wiersza i wyrównania do lewej strony
+        itemDiv.setAttribute('style', 'display: flex !important; flex-direction: column !important; width: 100% !important; box-sizing: border-box !important; padding: 12px 10px !important; border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important; background: transparent !important; text-align: left !important;');
+        
+        let detailsHtml = '';
+        if (todo.date || todo.notes) {
+            // Szczegóły zadania ładnie wyrównane pod tekstem głównym
+            detailsHtml = `<div class="todo-details" style="text-align: left !important; padding-left: 5px !important; margin-top: 5px !important;">`;
+            if (todo.date) detailsHtml += `<span class="todo-date" style="display: block; font-weight: bold; color: #047973; font-size: 13px;">Termin: ${todo.date}</span>`;
+            if (todo.notes) detailsHtml += `<span class="todo-notes" style="display: block; color: var(--text-sub); font-size: 13px;">${todo.notes}</span>`;
+            detailsHtml += `</div>`;
+        }
+        
+        // Struktura bez checkboxa: kliknięcie w sam tekst zmienia status zadania
+        itemDiv.innerHTML = `
+            <div class="todo-row" style="display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; background: transparent !important;">
+                
+                <!-- Lewa strona: Tekst przedmiotu (kliknięcie przekreśla) -->
+                <div class="todo-text-container ${todo.completed ? 'done' : ''}" onclick="toggleTodoStatus(${todo.id})" style="display: flex !important; align-items: center !important; flex: 1 !important; text-align: left !important; cursor: pointer; padding: 4px 0;">
+                    <span style="font-weight: 600; color: var(--text-main); font-size: 16px; text-align: left !important;">${todo.text}</span>
+                </div>
+                
+                <!-- Prawa strona: Przycisk usuwania (kosz) -->
+                <button class="delete-todo-btn" onclick="deleteTodoItem(${todo.id})" style="background: transparent !important; border: none !important; color: #dc3545; cursor: pointer; font-size: 16px; padding: 6px !important; margin: 0 !important; width: auto !important; height: auto !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; box-shadow: none !important;">🗑️</button>
+            
+            </div>
+            ${detailsHtml}
+        `;
+        
+        container.appendChild(itemDiv);
+    });
+}
+
+
+// Funkcja obsługująca płynne przełączanie kart na górze
+function switchTab(sectionId, element) {
+    // Ukryj wszystkie sekcje i dezaktywuj przyciski
+    document.querySelectorAll('.app-section').forEach(sec => sec.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    
+    // Pokaż wybraną sekcję i podświetl przycisk
+    document.getElementById(sectionId).classList.add('active');
+    element.classList.add('active');
+}
+
+// Funkcja dodawania nowego zadania domowego
+// Lista słów, które aktywują dodatkowe pola (możesz dopisać własne przedmioty)
+const schoolSubjects = [
+    "matematyka", "matma", "mat", "polski", "pol", "angielski", "ang", "historia", "hist", 
+    "biologia", "biol", "chemia", "fizyka", "fiz", "geografia", "geogr", "informatyka", "inf", "wf", "edukacja zdrowotna", "ez", "zwych", "z wychowawcą", "technika", "tech", "plastyka", "plast", "rel", "religia"
+];
+
+// Funkcja sprawdzająca w locie, czy użytkownik wpisał przedmiot szkolny
+function checkTodoInput(value) {
+    const extraFields = document.getElementById('extraFields');
+    const textLower = value.toLowerCase().trim();
+    
+    // Sprawdzamy, czy wpisany tekst zawiera w sobie któreś ze słów z listy schoolSubjects
+    const zawieraPrzedmiot = schoolSubjects.some(subject => textLower.includes(subject));
+    
+    if (zawieraPrzedmiot) {
+        extraFields.classList.add('visible');
+    } else {
+        extraFields.classList.remove('visible');
+    }
+}
+
+function addTodoItem() {
+    const input = document.getElementById('todoInput');
+    const typeInput = document.getElementById('todoType');
+    const dateInput = document.getElementById('todoDate');
+    const notesInput = document.getElementById('todoNotes');
+    
+    // Jeśli z jakiegoś powodu pole tekstowe nie istnieje, przerywamy bezpiecznie
+    if (!input) return;
+    
+    const todoText = input.value.trim();
+    
+    if (todoText !== "") {
+        let formattedDate = "";
+        
+        if (dateInput && dateInput.value) {
+            const d = new Date(dateInput.value);
+            formattedDate = d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        // Bezpieczne pobranie wartości kategorii (jeśli pole nie istnieje, domyślnie ustawia 'homework')
+        const selectedType = typeInput ? typeInput.value : 'homework';
+        const notesValue = notesInput ? notesInput.value.trim() : '';
+
+        const newTodo = {
+            id: Date.now(),
+            text: todoText,
+            type: selectedType, 
+            date: formattedDate,
+            notes: notesValue,
+            completed: false
+        };
+        
+        todoItems.push(newTodo);
+        localStorage.setItem('schoolTodoList', JSON.stringify(todoItems));
+        
+        // Czyszczenie i resetowanie pól (zabezpieczone przed błędami braku elementów)
+        input.value = '';
+        if (typeInput) typeInput.value = 'homework';
+        if (dateInput) dateInput.value = '';
+        if (notesInput) notesInput.value = '';
+        
+        const extraFields = document.getElementById('extraFields');
+        if (extraFields) extraFields.classList.remove('visible');
+        
+        renderTodos();
+    }
+}
+
+
+function renderTodos() {
+    const container = document.getElementById('todoListContainer');
+    container.innerHTML = '';
+    
+    if (todoItems.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:var(--text-sub); padding: 15px;">Wszystko Gotowe!</div>';
+        return;
+    }
+    
+    todoItems.forEach(todo => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'todo-item';
+        
+        // WYMUSZENIE UKŁADU: Każde zadanie to pionowy kontener zajmujący 100% szerokości
+        itemDiv.setAttribute('style', 'display: flex !important; flex-direction: column !important; width: 100% !important; box-sizing: border-box !important; padding: 12px 10px !important; border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important; background: transparent !important; text-align: left !important;');
+        
+        let detailsHtml = '';
+        if (todo.date || todo.notes) {
+            // Dodatkowe informacje wyrównane do lewej strony
+            detailsHtml = `<div class="todo-details" style="text-align: left !important; padding-left: 30px !important; margin-top: 5px !important;">`;
+            if (todo.date) detailsHtml += `<span class="todo-date" style="display: block; font-weight: bold; color: #28a745; font-size: 13px;">📅 Termin: ${todo.date}</span>`;
+            if (todo.notes) detailsHtml += `<span class="todo-notes" style="display: block; color: var(--text-sub); font-size: 13px;">📝 ${todo.notes}</span>`;
+            detailsHtml += `</div>`;
+        }
+        
+        // NOWY, NIEZALEŻNY UKŁAD STRUKTURALNY HTML
+        itemDiv.innerHTML = `
+            <div class="todo-row" style="display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; background: transparent !important;">
+                
+                <!-- Lewa strona: Checkbox i Tekst (spięte razem, wyrównane do lewej) -->
+                <div class="todo-text-container ${todo.completed ? 'done' : ''}" onclick="toggleTodoStatus(${todo.id})" style="display: flex !important; align-items: center !important; gap: 12px !important; flex: 1 !important; text-align: left !important; cursor: pointer;">
+                    <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''} onclick="event.stopPropagation(); toggleTodoStatus(${todo.id});" style="width: 18px; height: 18px; margin: 0; cursor: pointer;">
+                    <span style="font-weight: 600; color: var(--text-main); font-size: 16px; text-align: left !important;">${todo.text}</span>
+                </div>
+                
+                <!-- Prawa strona: Samotny kosz przyklejony do prawej krawędzi -->
+                <button class="delete-todo-btn" onclick="deleteTodoItem(${todo.id})" style="background: transparent !important; border: none !important; color: #dc3545; cursor: pointer; font-size: 16px; padding: 6px !important; margin: 0 !important; width: auto !important; height: auto !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; box-shadow: none !important;">Usuń</button>
+            
+            </div>
+            ${detailsHtml}
+        `;
+        
+        container.appendChild(itemDiv);
+    });
+}
+
+
+
+
+// Przełączanie statusu zrobione / niezrobione po kliknięciu
+function toggleTodoStatus(id) {
+    todoItems = todoItems.map(todo => {
+        if (todo.id === id) todo.completed = !todo.completed;
+        return todo;
+    });
+    localStorage.setItem('schoolTodoList', JSON.stringify(todoItems));
+    renderTodos();
+}
+
+// Usuwanie zadania domowego z listy
+function deleteTodoItem(id) {
+    todoItems = todoItems.filter(todo => todo.id !== id);
+    localStorage.setItem('schoolTodoList', JSON.stringify(todoItems));
+    renderTodos();
+}
+
+    let averageHistory = JSON.parse(localStorage.getItem('avgHistoryData')) || [];
+    let timelineChart = null;
+
+    // Wywołujemy inicjalizację od razu po załadowaniu elementów HTML
+    document.addEventListener("DOMContentLoaded", function() {
+        initChart();
+        updateUI();
+        renderTodos();
+    });
+
+    function addAverageRecord() {
+        const input = document.getElementById('averageInput');
+        const avgValue = parseFloat(input.value);
+
+        if (!isNaN(avgValue) && avgValue >= 1 && avgValue <= 6) {
+            const now = new Date();
+            const formattedDate = now.toLocaleDateString('pl-PL', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            }) + ' ' + now.toLocaleTimeString('pl-PL', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            const newRecord = {
+                date: formattedDate,
+                value: avgValue.toFixed(2)
+            };
+
+            averageHistory.push(newRecord);
+            localStorage.setItem('avgHistoryData', JSON.stringify(averageHistory));
+            
+            input.value = ''; 
+            updateUI();
+        } else {
+            showAlert('Proszę wpisać poprawną wartość średniej w przedziale od 1.0 do 6.0!');
+        }
+    }
+
+    function initChart() {
+        const ctx = document.getElementById('averageTimelineChart').getContext('2d');
+        timelineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [], 
+                datasets: [{
+                    label: 'Twoja średnia',
+                    data: [], 
+                    borderColor: '#047973',
+                    backgroundColor: 'rgb(4, 121, 115, 0.2)',
+                    borderWidth: 3,
+                    lineTension: 0.2, // Poprawiona składnia dla wersji 2.x
+                    fill: true,
+                    pointBackgroundColor: '#047973',
+                    pointRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    yAxes: [{ // Poprawiona struktura osi dla wersji 2.x
+                        ticks: {
+                            min: 1,
+                            max: 6,
+                            stepSize: 0.5
+                        }
+                    }]
+                }
+            }
+        });
+    }
+
+    function updateUI() {
+        const historyLog = document.getElementById('historyLog');
+        historyLog.innerHTML = '';
+
+        if (averageHistory.length === 0) {
+            historyLog.innerHTML = '<div style="text-align:center; color:#888; padding: 10px;">Brak zapisanych wpisów</div>';
+        }
+
+        let chartLabels = [];
+        let chartData = [];
+
+        averageHistory.forEach((record) => {
+            chartLabels.push(record.date);
+            chartData.push(record.value);
+
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.innerHTML = `<span class="date">${record.date}</span><span class="val">${record.value}</span>`;
+            historyLog.appendChild(item);
+        });
+
+        historyLog.scrollTop = historyLog.scrollHeight;
+
+        if (timelineChart) {
+            timelineChart.data.labels = chartLabels;
+            timelineChart.data.datasets[0].data = chartData; // Poprawiony i stabilny zapis
+            timelineChart.update();
+        }
+    }
+
+    function clearHistory() {
+        if(confirm("Czy na pewno chcesz usunąć całą zapisaną historię średnich?")) {
+            averageHistory = [];
+            localStorage.removeItem('avgHistoryData');
+            updateUI();
+        }
+    }
+    // Funkcja wyświetlająca własne, animowane powiadomienie z góry ekranu
+function showAlert(message) {
+    const alertBox = document.getElementById('customAlert');
+    
+    // Ustawiamy tekst błędu
+    alertBox.innerText = message;
+    
+    // Dodajemy klasę, która uruchamia animację wsuwania
+    alertBox.classList.add('show');
+    
+    // Po 3 sekundach (3000 ms) automatycznie chowamy powiadomienie
+    setTimeout(() => {
+        alertBox.classList.remove('show');
+    }, 3000);
+}
+
+</script>
+
+</body>
+</html>
